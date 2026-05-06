@@ -2,11 +2,10 @@ import { Router } from "express";
 import { upload } from "../middleware/upload";
 import { protectAdmin } from "../middleware/auth";
 import { validate } from "../middleware/validate";
-import { createProductValidator } from "../validators/product.validator";
+import { createProductValidator, updateProductValidator } from "../validators/product.validator";
 import {
     getProducts,
     getProductById,
-    createProduct,
     createProductWithImages,
     updateProduct,
     deleteProduct
@@ -20,14 +19,6 @@ router.get("/:id", getProductById);
 router.post(
     "/",
     protectAdmin,
-    createProductValidator,
-    validate,
-    createProduct
-);
-
-router.post(
-    "/with-images",
-    protectAdmin,
     upload.array("images", 8),
     createProductValidator,
     validate,
@@ -37,7 +28,7 @@ router.post(
 router.put(
     "/:id",
     protectAdmin,
-    createProductValidator,
+    updateProductValidator,
     validate,
     updateProduct
 );

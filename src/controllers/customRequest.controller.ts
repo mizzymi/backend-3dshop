@@ -48,3 +48,19 @@ export const createCustomRequest = async (req: Request, res: Response) => {
         });
     }
 };
+
+export const getCustomRequests = async (_req: Request, res: Response) => {
+    try {
+        const customs = await CustomRequest.find()
+            .sort({ createdAt: -1 });
+
+        res.json(customs);
+    } catch (error) {
+        console.error("GET CUSTOM REQUESTS ERROR:", error);
+
+        res.status(500).json({
+            success: false,
+            message: "Error cargando solicitudes personalizadas"
+        });
+    }
+};

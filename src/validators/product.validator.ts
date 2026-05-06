@@ -1,5 +1,32 @@
 import { body } from "express-validator";
 
+export const updateProductValidator = [
+    body("name")
+        .optional()
+        .notEmpty()
+        .withMessage("El nombre no puede estar vacío"),
+
+    body("description")
+        .optional()
+        .isString()
+        .withMessage("La descripción no es válida"),
+
+    body("price")
+        .optional()
+        .isFloat({ min: 0 })
+        .withMessage("El precio no es válido"),
+
+    body("stock")
+        .optional()
+        .isInt({ min: 0 })
+        .withMessage("El stock no es válido"),
+
+    body("category")
+        .optional()
+        .isString()
+        .withMessage("La categoría no es válida")
+];
+
 export const createProductValidator = [
     body("name")
         .notEmpty()

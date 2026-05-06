@@ -1,7 +1,11 @@
 import { Router } from "express";
 
-import { createCustomRequest } from "../controllers/customRequest.controller";
+import {
+    createCustomRequest,
+    getCustomRequests
+} from "../controllers/customRequest.controller";
 
+import { protectAdmin } from "../middleware/auth";
 import { validate } from "../middleware/validate";
 import { upload } from "../middleware/upload";
 
@@ -15,6 +19,12 @@ router.post(
     createCustomRequestValidator,
     validate,
     createCustomRequest
+);
+
+router.get(
+    "/",
+    protectAdmin,
+    getCustomRequests
 );
 
 export default router;

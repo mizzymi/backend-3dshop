@@ -4,10 +4,27 @@ import {
     sendAdminCustomRequestNotification,
     sendCustomerCustomRequestConfirmation
 } from "../utils/customRequestEmails";
+import { uploadToCloudinary } from "../utils/uploadToCloudinary";
 
 export const createCustomRequest = async (req: Request, res: Response) => {
     try {
-        const customRequest = await CustomRequest.create(req.body);
+        const files = req.files as Express.Multer.File[] | undefined;
+
+        const imageUrls = files?.length
+            ? await Promise.all(
+                files.map(file =>
+                    uploadToCloudinary(
+                        file.buffer,
+                        "reimii-3d/custom-requests"
+                    )
+                )
+            )
+            : [];
+
+        const customRequest = await CustomRequest.create({
+            ...req.body,
+            images: imageUrls
+        });
 
         try {
             await sendAdminCustomRequestNotification(customRequest);
@@ -21,6 +38,7 @@ export const createCustomRequest = async (req: Request, res: Response) => {
             message: "Solicitud personalizada creada correctamente",
             customRequest
         });
+
     } catch (error) {
         console.error("CUSTOM REQUEST ERROR:", error);
 

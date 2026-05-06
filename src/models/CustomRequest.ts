@@ -8,6 +8,8 @@ export interface ICustomRequest extends Document {
     type?: string;
     size?: string;
 
+    images?: string[];
+
     description: string;
 
     budget?: number;
@@ -28,6 +30,8 @@ const CustomRequestSchema = new Schema<ICustomRequest>(
 
         size: { type: String },
 
+        images: [{ type: String }],
+        
         description: {
             type: String,
             required: true

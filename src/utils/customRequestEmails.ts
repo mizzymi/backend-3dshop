@@ -69,6 +69,20 @@ export const sendCustomerCustomRequestConfirmation = async (customRequest: any) 
 };
 
 export const sendAdminCustomRequestNotification = async (customRequest: any) => {
+    const imagesHtml = customRequest.images?.length
+        ? customRequest.images
+            .map((image: string) => `
+            <a href="${image}" target="_blank" style="display:inline-block;margin:0 12px 12px 0;">
+                <img
+                    src="${image}"
+                    width="220"
+                    style="border-radius:12px;border:1px solid #e2e8f0;"
+                />
+            </a>
+        `)
+            .join("")
+        : "<p>No se han subido imágenes.</p>";
+
     await transporter.sendMail({
         from: `"Reimii 3D Custom" <${process.env.MAIL_ADMIN_FROM}>`,
         to: process.env.SHOP_EMAIL,
@@ -113,6 +127,10 @@ export const sendAdminCustomRequestNotification = async (customRequest: any) => 
 
         <h2>Descripción</h2>
         <p>${customRequest.description}</p>
+
+        <h2>Imágenes de referencia</h2>
+
+        <div style="margin-top: 16px;">${imagesHtml}</div> 
       </div>
     `
     });

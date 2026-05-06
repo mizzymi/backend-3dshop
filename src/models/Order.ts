@@ -26,7 +26,7 @@ export interface IOrder extends Document {
     shippingCost: number;
     total: number;
     status: "pending" | "paid" | "processing" | "shipped" | "cancelled";
-    paymentMethod: "manual" | "stripe";
+    paymentMethod: "manual" | "stripe" | "free";
     stripeSessionId?: string;
 }
 
@@ -70,7 +70,7 @@ const OrderSchema = new Schema<IOrder>(
 
         paymentMethod: {
             type: String,
-            enum: ["manual", "stripe"],
+            enum: ["manual", "stripe", "free"],
             default: "manual"
         },
 

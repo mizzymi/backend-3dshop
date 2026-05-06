@@ -3,10 +3,17 @@ import stripe from "../config/stripe";
 import Product from "../models/Product";
 import Order from "../models/Order";
 import { calculateShipping } from "../utils/calculateShipping";
+import { processOrder } from "../utils/processOrder";
 
 export const createCheckoutSession = async (req: Request, res: Response) => {
     try {
         const { customerName, email, phone, items, shippingAddress } = req.body;
+
+        if (!items || !Array.isArray(items) || items.length === 0) {
+            return res.status(400).json({
+                message: "El carrito está vacío"
+            });
+        }
 
         if (!shippingAddress) {
             return res.status(400).json({
@@ -55,12 +62,36 @@ export const createCheckoutSession = async (req: Request, res: Response) => {
             shippingAddress.country
         );
 
+        const total = subtotal + shippingCost;
+
+        if (total <= 0) {
+            const order = await processOrder({
+                items,
+                shippingAddress,
+                customerName,
+                email,
+                phone,
+                subtotal,
+                shippingCost,
+                total: 0,
+                paymentMethod: "free",
+                stripeSessionId: undefined
+            });
+
+            return res.json({
+                freeOrder: true,
+                orderId: order._id,
+                redirectUrl: `${process.env.FRONTEND_URL}/success?session_id=free_order_${order._id}`
+            });
+        }
+
         if (shippingCost > 0) {
             line_items.push({
                 price_data: {
                     currency: "eur",
                     product_data: {
-                        name: "Envío"
+                        name: "Envío",
+                        images: []
                     },
                     unit_amount: Math.round(shippingCost * 100)
                 },
@@ -86,9 +117,9 @@ export const createCheckoutSession = async (req: Request, res: Response) => {
             cancel_url: `${process.env.FRONTEND_URL}/cart`
         });
 
-        res.json({ url: session.url });
+        return res.json({ url: session.url });
     } catch (error: any) {
-        res.status(400).json({
+        return res.status(400).json({
             message: error.message || "Error creando sesión de pago"
         });
     }
@@ -98,13 +129,24 @@ export const getCheckoutSessionResult = async (req: Request, res: Response) => {
     try {
         const sessionId = req.params.sessionId as string;
 
+        if (sessionId.startsWith("free_order_")) {
+            const orderId = sessionId.replace("free_order_", "");
+
+            const order = await Order.findById(orderId);
+
+            return res.json({
+                session: null,
+                order
+            });
+        }
+
         const session = await stripe.checkout.sessions.retrieve(sessionId);
 
         const order = await Order.findOne({
             stripeSessionId: sessionId
         });
 
-        res.json({
+        return res.json({
             session: {
                 id: session.id,
                 paymentStatus: session.payment_status,
@@ -115,7 +157,7 @@ export const getCheckoutSessionResult = async (req: Request, res: Response) => {
             order
         });
     } catch (error: any) {
-        res.status(400).json({
+        return res.status(400).json({
             message: error.message || "Error obteniendo sesión de pago"
         });
     }

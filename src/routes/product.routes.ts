@@ -28,6 +28,7 @@ router.post(
 router.put(
     "/:id",
     protectAdmin,
+    upload.array("images", 8),
     updateProductValidator,
     validate,
     updateProduct

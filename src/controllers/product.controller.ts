@@ -76,10 +76,51 @@ export const createProductWithImages = async (req: Request, res: Response) => {
 
 export const updateProduct = async (req: Request, res: Response) => {
     try {
+        const files = req.files as Express.Multer.File[] | undefined;
+
+        const parseArray = (value: any) => {
+            if (!value) return [];
+            if (Array.isArray(value)) return value;
+
+            try {
+                return JSON.parse(value);
+            } catch {
+                return [];
+            }
+        };
+
+        const newImageUrls = files?.length
+            ? await Promise.all(files.map((file) => uploadToCloudinary(file.buffer)))
+            : [];
+
+        const existingImages = parseArray(req.body.existingImages);
+
+        const updateData: any = {
+            name: req.body.name,
+            description: req.body.description,
+            category: req.body.category,
+            price: Number(req.body.price),
+            stock: Number(req.body.stock),
+            customizable: req.body.customizable === "true" || req.body.customizable === true,
+            featured: req.body.featured === "true" || req.body.featured === true,
+            colors: parseArray(req.body.colors),
+            sizes: parseArray(req.body.sizes),
+            images: [...existingImages, ...newImageUrls]
+        };
+
+        Object.keys(updateData).forEach((key) => {
+            if (updateData[key] === undefined || Number.isNaN(updateData[key])) {
+                delete updateData[key];
+            }
+        });
+
         const product = await Product.findByIdAndUpdate(
             req.params.id,
-            req.body,
-            { new: true }
+            updateData,
+            {
+                new: true,
+                runValidators: true
+            }
         );
 
         if (!product) {
@@ -90,8 +131,13 @@ export const updateProduct = async (req: Request, res: Response) => {
             message: "Producto actualizado correctamente",
             product
         });
-    } catch {
-        res.status(500).json({ message: "Error actualizando producto" });
+    } catch (error: any) {
+        console.error("UPDATE PRODUCT ERROR:", error);
+
+        res.status(500).json({
+            message: "Error actualizando producto",
+            error: error.message || error
+        });
     }
 };
 

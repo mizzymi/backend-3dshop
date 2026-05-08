@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { upload } from "../middleware/upload";
-import { protectAdmin } from "../middleware/auth";
+import { protect, protectAdmin } from "../middleware/auth";
 import { validate } from "../middleware/validate";
 import { createProductValidator, updateProductValidator } from "../validators/product.validator";
 import {
@@ -8,7 +8,8 @@ import {
     getProductById,
     createProductWithImages,
     updateProduct,
-    deleteProduct
+    deleteProduct,
+    addProductReview
 } from "../controllers/product.controller";
 
 const router = Router();
@@ -35,5 +36,7 @@ router.put(
 );
 
 router.delete("/:id", protectAdmin, deleteProduct);
+
+router.post("/:productId/reviews", protect, addProductReview);
 
 export default router;

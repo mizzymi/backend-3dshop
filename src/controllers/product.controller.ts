@@ -57,6 +57,7 @@ export const createProductWithImages = async (req: Request, res: Response) => {
             ...req.body,
             price: Number(req.body.price),
             stock: Number(req.body.stock),
+            category: JSON.parse(req.body.category || "[]"),
             customizable: req.body.customizable === "true",
             featured: req.body.featured === "true",
             colors: JSON.parse(req.body.colors || "[]"),
@@ -100,7 +101,7 @@ export const updateProduct = async (req: Request, res: Response) => {
         const updateData: any = {
             name: req.body.name,
             description: req.body.description,
-            category: req.body.category,
+            category: parseArray(req.body.category),
             price: Number(req.body.price),
             stock: Number(req.body.stock),
             customizable: req.body.customizable === "true" || req.body.customizable === true,

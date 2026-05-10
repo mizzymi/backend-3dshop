@@ -15,7 +15,7 @@ export interface IProduct extends Document {
     description: string;
     price: number;
     images: string[];
-    category: string;
+    category: string[];
     colors: string[];
     sizes: string[];
     stock: number;
@@ -63,27 +63,46 @@ const ReviewSchema = new Schema<IReview>(
 const ProductSchema = new Schema<IProduct>(
     {
         name: { type: String, required: true },
-        slug: { type: String, required: true, unique: true },
-        description: { type: String, required: true },
-        price: { type: Number, required: true },
+        slug: {
+            type: String,
+            required: true,
+            unique: true,
+        },
+        description: {
+            type: String,
+            required: true,
+        },
+        price: {
+            type: Number,
+            required: true,
+        },
         images: [{ type: String }],
-        category: { type: String, required: true },
+        category: {
+            type: [String],
+            default: [],
+        },
         colors: [{ type: String }],
         sizes: [{ type: String }],
-        stock: { type: Number, default: 0 },
-        customizable: { type: Boolean, default: false },
-        featured: { type: Boolean, default: false },
-
+        stock: {
+            type: Number,
+            default: 0,
+        },
+        customizable: {
+            type: Boolean,
+            default: false,
+        },
+        featured: {
+            type: Boolean,
+            default: false,
+        },
         reviews: {
             type: [ReviewSchema],
             default: [],
         },
-
         ratingAverage: {
             type: Number,
             default: 0,
         },
-
         ratingCount: {
             type: Number,
             default: 0,

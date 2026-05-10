@@ -1,13 +1,29 @@
-import { Request, Response } from "express";
+import { Response } from "express";
 import stripe from "../config/stripe";
 import Product from "../models/Product";
 import Order from "../models/Order";
 import { calculateShipping } from "../utils/calculateShipping";
 import { processOrder } from "../utils/processOrder";
+import { AuthRequest } from "../middleware/auth";
 
-export const createCheckoutSession = async (req: Request, res: Response) => {
+export const createCheckoutSession = async (
+    req: AuthRequest,
+    res: Response
+) => {
     try {
-        const { customerName, email, phone, items, shippingAddress } = req.body;
+        const {
+            customerName,
+            email,
+            phone,
+            items,
+            shippingAddress
+        } = req.body;
+
+        if (!customerName || !email) {
+            return res.status(400).json({
+                message: "Nombre y email son obligatorios"
+            });
+        }
 
         if (!items || !Array.isArray(items) || items.length === 0) {
             return res.status(400).json({
@@ -15,7 +31,16 @@ export const createCheckoutSession = async (req: Request, res: Response) => {
             });
         }
 
-        if (!shippingAddress) {
+        if (
+            !shippingAddress ||
+            !shippingAddress.fullName ||
+            !shippingAddress.phone ||
+            !shippingAddress.street ||
+            !shippingAddress.city ||
+            !shippingAddress.province ||
+            !shippingAddress.postalCode ||
+            !shippingAddress.country
+        ) {
             return res.status(400).json({
                 message: "La dirección de envío es obligatoria"
             });
@@ -27,33 +52,45 @@ export const createCheckoutSession = async (req: Request, res: Response) => {
             _id: { $in: productIds }
         });
 
+        if (products.length !== productIds.length) {
+            return res.status(400).json({
+                message: "Uno o más productos no existen"
+            });
+        }
+
         let subtotal = 0;
 
         const line_items = items.map((item: any) => {
             const product = products.find(
-                (p) => p._id.toString() === item.productId
+                p => p._id.toString() === item.productId
             );
 
             if (!product) {
                 throw new Error("Producto no encontrado");
             }
 
-            if (product.stock < item.quantity) {
+            const quantity = Number(item.quantity || 1);
+
+            if (quantity <= 0) {
+                throw new Error("Cantidad no válida");
+            }
+
+            if (product.stock < quantity) {
                 throw new Error(`Stock insuficiente para ${product.name}`);
             }
 
-            subtotal += product.price * item.quantity;
+            subtotal += product.price * quantity;
 
             return {
                 price_data: {
                     currency: "eur",
                     product_data: {
                         name: product.name,
-                        images: product.images?.slice(0, 1)
+                        images: product.images?.slice(0, 1) || []
                     },
                     unit_amount: Math.round(product.price * 100)
                 },
-                quantity: item.quantity
+                quantity
             };
         });
 
@@ -75,7 +112,8 @@ export const createCheckoutSession = async (req: Request, res: Response) => {
                 shippingCost,
                 total: 0,
                 paymentMethod: "free",
-                stripeSessionId: undefined
+                stripeSessionId: undefined,
+                user: req.user?.id
             });
 
             return res.json({
@@ -105,13 +143,15 @@ export const createCheckoutSession = async (req: Request, res: Response) => {
             mode: "payment",
             customer_email: email,
             metadata: {
+                user: req.user?.id || "",
                 customerName,
                 email,
                 phone: phone || "",
                 items: JSON.stringify(items),
                 shippingAddress: JSON.stringify(shippingAddress),
                 subtotal: subtotal.toString(),
-                shippingCost: shippingCost.toString()
+                shippingCost: shippingCost.toString(),
+                total: total.toString()
             },
             success_url: `${process.env.FRONTEND_URL}/success?session_id={CHECKOUT_SESSION_ID}`,
             cancel_url: `${process.env.FRONTEND_URL}/cart`
@@ -125,7 +165,10 @@ export const createCheckoutSession = async (req: Request, res: Response) => {
     }
 };
 
-export const getCheckoutSessionResult = async (req: Request, res: Response) => {
+export const getCheckoutSessionResult = async (
+    req: AuthRequest,
+    res: Response
+) => {
     try {
         const sessionId = req.params.sessionId as string;
 

@@ -19,6 +19,7 @@ router.get("/:id", getProductById);
 
 router.post(
     "/",
+    protect,
     protectAdmin,
     upload.array("images", 8),
     createProductValidator,
@@ -28,6 +29,7 @@ router.post(
 
 router.put(
     "/:id",
+    protect,
     protectAdmin,
     upload.array("images", 8),
     updateProductValidator,
@@ -35,7 +37,7 @@ router.put(
     updateProduct
 );
 
-router.delete("/:id", protectAdmin, deleteProduct);
+router.delete("/:id", protect, protectAdmin, deleteProduct);
 
 router.post("/:productId/reviews", protect, addProductReview);
 

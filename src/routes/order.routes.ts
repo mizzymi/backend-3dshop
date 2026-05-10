@@ -3,9 +3,10 @@ import {
     createOrder,
     getOrders,
     getOrderById,
-    updateOrderStatus
+    updateOrderStatus,
+    getMyOrders
 } from "../controllers/order.controller";
-import { protectAdmin } from "../middleware/auth";
+import { protect, protectAdmin } from "../middleware/auth";
 import { validate } from "../middleware/validate";
 import { createOrderValidator } from "../validators/order.validator";
 
@@ -18,8 +19,10 @@ router.post(
     createOrder
 );
 
-router.get("/", protectAdmin, getOrders);
-router.get("/:id", protectAdmin, getOrderById);
-router.patch("/:id/status", protectAdmin, updateOrderStatus);
+router.get("/my-orders", protect, getMyOrders);
+
+router.get("/", protect, protectAdmin, getOrders);
+router.get("/:id", protect, protectAdmin, getOrderById);
+router.patch("/:id/status", protect, protectAdmin, updateOrderStatus);
 
 export default router;

@@ -5,7 +5,7 @@ import {
     getCustomRequests
 } from "../controllers/customRequest.controller";
 
-import { protectAdmin } from "../middleware/auth";
+import { protect, protectAdmin } from "../middleware/auth";
 import { validate } from "../middleware/validate";
 import { upload } from "../middleware/upload";
 
@@ -23,6 +23,7 @@ router.post(
 
 router.get(
     "/",
+    protect,
     protectAdmin,
     getCustomRequests
 );

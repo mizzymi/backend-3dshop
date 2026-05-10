@@ -8,6 +8,7 @@ import customRequestRoutes from "./routes/customRequest.routes";
 import uploadRoutes from "./routes/upload.routes";
 import paymentRoutes from "./routes/payment.routes";
 import userRoutes from "./routes/user.routes";
+import adminRoutes from "./routes/admin.routes";
 
 const app = express();
 
@@ -22,6 +23,7 @@ app.get("/", (_req, res) => {
 });
 
 app.use('/api/users', userRoutes);
+app.use('/api/admin', adminRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/custom-requests", customRequestRoutes);

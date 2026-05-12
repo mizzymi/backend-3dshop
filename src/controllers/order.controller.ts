@@ -105,7 +105,7 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
 
     const subtotal = orderItems.reduce((sum, item) => sum + item.subtotal, 0);
 
-    const shippingCost = calculateShipping(subtotal, shippingAddress.country);
+    const shippingCost = calculateShipping(orderItems, shippingAddress.country);
 
     const total = subtotal + shippingCost;
 

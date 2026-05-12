@@ -89,7 +89,21 @@ export const createCheckoutSession = async (
       };
     });
 
-    const shippingCost = calculateShipping(subtotal, shippingAddress.country);
+    const shippingCost = calculateShipping(
+      orderItems.map((item) => ({
+        quantity: item.quantity,
+        weight: products.find((p) => p._id.toString() === item.productId)
+          ?.weight,
+
+        width: products.find((p) => p._id.toString() === item.productId)?.width,
+
+        height: products.find((p) => p._id.toString() === item.productId)
+          ?.height,
+
+        depth: products.find((p) => p._id.toString() === item.productId)?.depth,
+      })),
+      shippingAddress.country,
+    );
     const total = subtotal + shippingCost;
 
     if (total <= 0) {

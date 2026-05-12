@@ -5,6 +5,7 @@ import Order from "../models/Order";
 import { calculateShipping } from "../utils/calculateShipping";
 import { processOrder } from "../utils/processOrder";
 import { AuthRequest } from "../middleware/auth";
+import PendingCheckout from "../models/PendingCheckout";
 
 export const createCheckoutSession = async (
   req: AuthRequest,
@@ -14,13 +15,15 @@ export const createCheckoutSession = async (
     const { customerName, email, phone, items, shippingAddress } = req.body;
 
     if (!customerName || !email) {
-      return res
-        .status(400)
-        .json({ message: "Nombre y email son obligatorios" });
+      return res.status(400).json({
+        message: "Nombre y email son obligatorios",
+      });
     }
 
     if (!items || !Array.isArray(items) || items.length === 0) {
-      return res.status(400).json({ message: "El carrito está vacío" });
+      return res.status(400).json({
+        message: "El carrito está vacío",
+      });
     }
 
     if (
@@ -33,9 +36,9 @@ export const createCheckoutSession = async (
       !shippingAddress.postalCode ||
       !shippingAddress.country
     ) {
-      return res
-        .status(400)
-        .json({ message: "La dirección de envío es obligatoria" });
+      return res.status(400).json({
+        message: "La dirección de envío es obligatoria",
+      });
     }
 
     const productIds = items.map((item: any) => item.productId);
@@ -45,14 +48,14 @@ export const createCheckoutSession = async (
     });
 
     if (products.length !== productIds.length) {
-      return res
-        .status(400)
-        .json({ message: "Uno o más productos no existen" });
+      return res.status(400).json({
+        message: "Uno o más productos no existen",
+      });
     }
 
     let subtotal = 0;
 
-    for (const item of items) {
+    const orderItems = items.map((item: any) => {
       const product = products.find((p) => p._id.toString() === item.productId);
 
       if (!product) {
@@ -69,15 +72,29 @@ export const createCheckoutSession = async (
         throw new Error(`Stock insuficiente para ${product.name}`);
       }
 
-      subtotal += product.price * quantity;
-    }
+      const itemSubtotal = product.price * quantity;
+      subtotal += itemSubtotal;
+
+      return {
+        productId: product._id.toString(),
+        name: product.name,
+        quantity,
+        unitPrice: product.price,
+        subtotal: itemSubtotal,
+        color: item.color,
+        size: item.size,
+        image: product.images?.[0],
+        customization: item.customization,
+        customText: item.customText,
+      };
+    });
 
     const shippingCost = calculateShipping(subtotal, shippingAddress.country);
     const total = subtotal + shippingCost;
 
     if (total <= 0) {
       const order = await processOrder({
-        items,
+        items: orderItems,
         shippingAddress,
         customerName,
         email,
@@ -87,6 +104,7 @@ export const createCheckoutSession = async (
         total: 0,
         paymentMethod: "free",
         sumupCheckoutId: undefined,
+        sumupCheckoutReference: undefined,
         user: req.user?.id,
       });
 
@@ -111,20 +129,19 @@ export const createCheckoutSession = async (
       },
     });
 
-    await Order.create({
-      user: req.user?.id,
+    await PendingCheckout.create({
+      checkoutReference,
+      checkoutId: checkout.id,
+      checkoutUrl: checkout.hosted_checkout_url,
       customerName,
       email,
       phone,
-      items,
+      user: req.user?.id,
       shippingAddress,
+      items: orderItems,
       subtotal,
       shippingCost,
       total,
-      paymentMethod: "sumup",
-      status: "pending",
-      sumupCheckoutId: checkout.id,
-      sumupCheckoutReference: checkoutReference,
     });
 
     return res.json({
@@ -156,17 +173,63 @@ export const getCheckoutSessionResult = async (
       });
     }
 
-    const order = await Order.findOne({
-      sumupCheckoutReference: sessionId,
+    const pending = await PendingCheckout.findOne({
+      checkoutReference: sessionId,
     });
 
-    if (!order?.sumupCheckoutId) {
+    if (!pending) {
+      const order = await Order.findOne({
+        sumupCheckoutReference: sessionId,
+      });
+
+      if (order) {
+        return res.json({
+          session: null,
+          order,
+        });
+      }
+
       return res.status(404).json({
-        message: "Pedido no encontrado",
+        message: "Checkout pendiente no encontrado",
       });
     }
 
-    const checkout = await sumup.checkouts.get(order.sumupCheckoutId);
+    const checkout = await sumup.checkouts.get(pending.checkoutId);
+
+    if (checkout.status !== "PAID") {
+      return res.json({
+        session: {
+          id: checkout.id,
+          paymentStatus: checkout.status,
+          amountTotal: checkout.amount,
+          currency: checkout.currency,
+        },
+        order: null,
+      });
+    }
+
+    let order = await Order.findOne({
+      sumupCheckoutId: pending.checkoutId,
+    });
+
+    if (!order) {
+      order = await processOrder({
+        items: pending.items,
+        shippingAddress: pending.shippingAddress,
+        customerName: pending.customerName,
+        email: pending.email,
+        phone: pending.phone,
+        subtotal: pending.subtotal,
+        shippingCost: pending.shippingCost,
+        total: pending.total,
+        paymentMethod: "sumup",
+        sumupCheckoutId: pending.checkoutId,
+        sumupCheckoutReference: pending.checkoutReference,
+        user: pending.user,
+      });
+
+      await PendingCheckout.deleteOne({ _id: pending._id });
+    }
 
     return res.json({
       session: {

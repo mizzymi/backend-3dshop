@@ -9,8 +9,8 @@ export const calculateShipping = (subtotal: number, country: string): number => 
     normalizedCountry === "españa" ||
     normalizedCountry === "spain"
   ) {
-    return 4.99;
+    return 5.99;
   }
 
-  return 12.99;
+  return 15.99;
 };

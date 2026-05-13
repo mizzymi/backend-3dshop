@@ -3,6 +3,19 @@ import Order from "../models/Order";
 import Product from "../models/Product";
 import { AuthRequest } from "../middleware/auth";
 import { calculateShipping } from "../utils/calculateShipping";
+import { uploadToCloudinary } from "../utils/uploadToCloudinary";
+
+const parseJSON = (value: any, fallback: any = []) => {
+  if (!value) return fallback;
+
+  if (typeof value !== "string") return value;
+
+  try {
+    return JSON.parse(value);
+  } catch {
+    return fallback;
+  }
+};
 
 export const createOrder = async (req: AuthRequest, res: Response) => {
   const session = await Order.startSession();
@@ -10,17 +23,23 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
   try {
     session.startTransaction();
 
-    const {
-      customerName,
-      email,
-      phone,
-      shippingAddress,
-      items,
-      paymentMethod = "manual",
-      sumupCheckoutId,
-      sumupCheckoutReference,
-      notes,
-    } = req.body;
+    const files = req.files as Express.Multer.File[] | undefined;
+
+    const uploadedImages = files?.length
+      ? await Promise.all(files.map((file) => uploadToCloudinary(file.buffer)))
+      : [];
+
+    const customerName = req.body.customerName;
+    const email = req.body.email;
+    const phone = req.body.phone;
+
+    const shippingAddress = parseJSON(req.body.shippingAddress, {});
+    const items = parseJSON(req.body.items, []);
+
+    const paymentMethod = req.body.paymentMethod || "manual";
+    const sumupCheckoutId = req.body.sumupCheckoutId;
+    const sumupCheckoutReference = req.body.sumupCheckoutReference;
+    const notes = req.body.notes;
 
     if (!customerName || !email) {
       await session.abortTransaction();
@@ -114,6 +133,7 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
             id: productOption.id,
             label: productOption.label,
             price: productOption.price,
+            image: productOption.image,
           };
         });
 
@@ -124,6 +144,10 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
           options: validOptions,
         };
       });
+
+      const customImages = (item.customImageIndexes || [])
+        .map((index: number) => uploadedImages[index])
+        .filter(Boolean);
 
       product.stock -= quantity;
       await product.save({ session });
@@ -145,6 +169,7 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
         customization: item.customization,
         customText: item.customText,
         modifiers: orderModifiers,
+        customImages,
       });
     }
 

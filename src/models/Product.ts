@@ -13,6 +13,7 @@ export interface IModifierOption {
   id: string;
   label: string;
   price: number;
+  image?: string;
   description?: string;
 }
 
@@ -104,6 +105,10 @@ const ModifierOptionSchema = new Schema<IModifierOption>(
     },
 
     description: {
+      type: String,
+    },
+
+    image: {
       type: String,
     },
   },

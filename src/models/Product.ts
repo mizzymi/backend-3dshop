@@ -15,6 +15,7 @@ export interface IModifierOption {
   price: number;
   image?: string;
   description?: string;
+  requiresCustomerImage: boolean;
 }
 
 export interface IModifier {
@@ -110,6 +111,11 @@ const ModifierOptionSchema = new Schema<IModifierOption>(
 
     image: {
       type: String,
+    },
+    
+    requiresCustomerImage: {
+      type: Boolean,
+      default: false,
     },
   },
   { _id: false },

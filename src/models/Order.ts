@@ -1,16 +1,35 @@
 import mongoose, { Schema, Document } from "mongoose";
 
+export interface IOrderModifierOption {
+  id: string;
+  label: string;
+  price: number;
+  image?: string;
+  requiresCustomerImage?: boolean;
+  customerImages?: string[];
+}
+
+export interface IOrderModifier {
+  id: string;
+  name: string;
+  type: "single" | "multiple";
+  options: IOrderModifierOption[];
+}
+
 export interface IOrderItem {
   productId: string;
   name: string;
   quantity: number;
   unitPrice: number;
+  basePrice: number;
+  modifiersTotal: number;
   subtotal: number;
   color?: string;
   size?: string;
   image?: string;
   customization?: string;
   customText?: string;
+  modifiers?: IOrderModifier[];
 }
 
 export interface IShippingAddress {
@@ -48,6 +67,69 @@ export interface IOrder extends Document {
   createdAt?: Date;
   updatedAt?: Date;
 }
+
+const OrderModifierOptionSchema = new Schema<IOrderModifierOption>(
+  {
+    id: {
+      type: String,
+      required: true,
+    },
+
+    label: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+
+    price: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+
+    image: {
+      type: String,
+    },
+
+    requiresCustomerImage: {
+      type: Boolean,
+      default: false,
+    },
+
+    customerImages: {
+      type: [String],
+      default: [],
+    },
+  },
+  { _id: false },
+);
+
+const OrderModifierSchema = new Schema<IOrderModifier>(
+  {
+    id: {
+      type: String,
+      required: true,
+    },
+
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+
+    type: {
+      type: String,
+      enum: ["single", "multiple"],
+      default: "single",
+    },
+
+    options: {
+      type: [OrderModifierOptionSchema],
+      default: [],
+    },
+  },
+  { _id: false },
+);
 
 const OrderSchema = new Schema<IOrder>(
   {
@@ -145,6 +227,18 @@ const OrderSchema = new Schema<IOrder>(
           min: 0,
         },
 
+        basePrice: {
+          type: Number,
+          default: 0,
+          min: 0,
+        },
+
+        modifiersTotal: {
+          type: Number,
+          default: 0,
+          min: 0,
+        },
+
         subtotal: {
           type: Number,
           required: true,
@@ -173,6 +267,11 @@ const OrderSchema = new Schema<IOrder>(
         customText: {
           type: String,
           trim: true,
+        },
+
+        modifiers: {
+          type: [OrderModifierSchema],
+          default: [],
         },
       },
     ],

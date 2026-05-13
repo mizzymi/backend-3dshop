@@ -23,9 +23,9 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
   try {
     session.startTransaction();
 
-    const files = req.files as Express.Multer.File[] | undefined;
+    const files = (req.files as Express.Multer.File[]) || [];
 
-    const uploadedImages = files?.length
+    const uploadedImages = files.length
       ? await Promise.all(files.map((file) => uploadToCloudinary(file.buffer)))
       : [];
 
@@ -129,11 +129,26 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
 
           modifiersTotal += Number(productOption.price || 0);
 
+          const customerImages = (selectedOption.customImageIndexes || [])
+            .map((index: number) => uploadedImages[index])
+            .filter(Boolean);
+
+          if (
+            productOption.requiresCustomerImage &&
+            customerImages.length === 0
+          ) {
+            throw new Error(
+              `La opción "${productOption.label}" requiere una imagen`,
+            );
+          }
+
           return {
             id: productOption.id,
             label: productOption.label,
             price: productOption.price,
             image: productOption.image,
+            requiresCustomerImage: productOption.requiresCustomerImage,
+            customerImages,
           };
         });
 
@@ -144,10 +159,6 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
           options: validOptions,
         };
       });
-
-      const customImages = (item.customImageIndexes || [])
-        .map((index: number) => uploadedImages[index])
-        .filter(Boolean);
 
       product.stock -= quantity;
       await product.save({ session });
@@ -169,7 +180,6 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
         customization: item.customization,
         customText: item.customText,
         modifiers: orderModifiers,
-        customImages,
       });
     }
 

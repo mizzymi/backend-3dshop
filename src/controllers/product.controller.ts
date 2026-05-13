@@ -39,35 +39,35 @@ export const getProductById = async (req: Request, res: Response) => {
   }
 };
 
-export const createProduct = async (req: Request, res: Response) => {
-  try {
-    const product = await Product.create({
-      ...req.body,
-      category: parseArray(req.body.category),
-      colors: parseArray(req.body.colors),
-      sizes: parseArray(req.body.sizes),
-      modifiers: parseArray(req.body.modifiers),
-    });
-
-    res.status(201).json({
-      message: "Producto creado correctamente",
-      product,
-    });
-  } catch (error) {
-    res.status(500).json({
-      message: "Error creando producto",
-      error,
-    });
-  }
-};
-
 export const createProductWithImages = async (req: Request, res: Response) => {
   try {
-    const files = req.files as Express.Multer.File[];
+    const files = (req.files as Express.Multer.File[]) || [];
 
-    const imageUrls = files?.length
-      ? await Promise.all(files.map((file) => uploadToCloudinary(file.buffer)))
+    const productImageFiles = files.filter(
+      (file) => file.fieldname === "images",
+    );
+
+    const imageUrls = productImageFiles.length
+      ? await Promise.all(
+          productImageFiles.map((file) => uploadToCloudinary(file.buffer)),
+        )
       : [];
+
+    const modifiers = parseArray(req.body.modifiers);
+
+    for (const modifier of modifiers) {
+      for (const option of modifier.options || []) {
+        const fieldName = `modifier_option_image_${modifier.id}_${option.id}`;
+
+        const optionImageFile = files.find(
+          (file) => file.fieldname === fieldName,
+        );
+
+        if (optionImageFile) {
+          option.image = await uploadToCloudinary(optionImageFile.buffer);
+        }
+      }
+    }
 
     const product = await Product.create({
       ...req.body,
@@ -82,7 +82,7 @@ export const createProductWithImages = async (req: Request, res: Response) => {
       featured: req.body.featured === "true",
       colors: parseArray(req.body.colors),
       sizes: parseArray(req.body.sizes),
-      modifiers: parseArray(req.body.modifiers),
+      modifiers,
       images: imageUrls,
     });
 
@@ -90,26 +90,34 @@ export const createProductWithImages = async (req: Request, res: Response) => {
       message: "Producto creado con imágenes correctamente",
       product,
     });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({
       message: "Error creando producto con imágenes",
-      error,
+      error: error.message || error,
     });
   }
 };
 
 export const updateProduct = async (req: Request, res: Response) => {
   try {
-    const files = req.files as Express.Multer.File[] | undefined;
+    const files = (req.files as Express.Multer.File[]) || [];
 
     const oldProduct = await Product.findById(req.params.id);
 
     if (!oldProduct) {
-      return res.status(404).json({ message: "Producto no encontrado" });
+      return res.status(404).json({
+        message: "Producto no encontrado",
+      });
     }
 
-    const newImageUrls = files?.length
-      ? await Promise.all(files.map((file) => uploadToCloudinary(file.buffer)))
+    const productImageFiles = files.filter(
+      (file) => file.fieldname === "images",
+    );
+
+    const newImageUrls = productImageFiles.length
+      ? await Promise.all(
+          productImageFiles.map((file) => uploadToCloudinary(file.buffer)),
+        )
       : [];
 
     const existingImages = parseArray(req.body.existingImages);
@@ -122,23 +130,47 @@ export const updateProduct = async (req: Request, res: Response) => {
       await deleteCloudinaryImages(imagesToDelete);
     }
 
+    const modifiers = parseArray(req.body.modifiers);
+
+    for (const modifier of modifiers) {
+      for (const option of modifier.options || []) {
+        const fieldName = `modifier_option_image_${modifier.id}_${option.id}`;
+
+        const optionImageFile = files.find(
+          (file) => file.fieldname === fieldName,
+        );
+
+        if (optionImageFile) {
+          option.image = await uploadToCloudinary(optionImageFile.buffer);
+        }
+      }
+    }
+
     const updateData: any = {
       name: req.body.name,
       slug: req.body.slug,
       description: req.body.description,
+
       category: parseArray(req.body.category),
+
       price: Number(req.body.price),
       stock: Number(req.body.stock),
+
       weight: Number(req.body.weight || 0),
       width: Number(req.body.width || 0),
       height: Number(req.body.height || 0),
       depth: Number(req.body.depth || 0),
+
       customizable:
         req.body.customizable === "true" || req.body.customizable === true,
+
       featured: req.body.featured === "true" || req.body.featured === true,
+
       colors: parseArray(req.body.colors),
       sizes: parseArray(req.body.sizes),
-      modifiers: parseArray(req.body.modifiers),
+
+      modifiers,
+
       images: [...existingImages, ...newImageUrls],
     };
 

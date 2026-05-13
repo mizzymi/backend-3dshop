@@ -84,22 +84,67 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
         throw new Error(`Stock insuficiente para ${product.name}`);
       }
 
+      const selectedModifiers = item.modifiers || [];
+
+      let modifiersTotal = 0;
+
+      const orderModifiers = selectedModifiers.map((selectedModifier: any) => {
+        const productModifier = product.modifiers?.find(
+          (modifier: any) => modifier.id === selectedModifier.id,
+        );
+
+        if (!productModifier) {
+          throw new Error(`Modificador no válido para ${product.name}`);
+        }
+
+        const selectedOptions = selectedModifier.options || [];
+
+        const validOptions = selectedOptions.map((selectedOption: any) => {
+          const productOption = productModifier.options.find(
+            (option: any) => option.id === selectedOption.id,
+          );
+
+          if (!productOption) {
+            throw new Error(`Opción no válida para ${product.name}`);
+          }
+
+          modifiersTotal += Number(productOption.price || 0);
+
+          return {
+            id: productOption.id,
+            label: productOption.label,
+            price: productOption.price,
+          };
+        });
+
+        return {
+          id: productModifier.id,
+          name: productModifier.name,
+          type: productModifier.type,
+          options: validOptions,
+        };
+      });
+
       product.stock -= quantity;
       await product.save({ session });
 
-      const itemSubtotal = product.price * quantity;
+      const unitPrice = product.price + modifiersTotal;
+      const itemSubtotal = unitPrice * quantity;
 
       orderItems.push({
         productId: product._id.toString(),
         name: product.name,
         quantity,
-        unitPrice: product.price,
+        unitPrice,
+        basePrice: product.price,
+        modifiersTotal,
         subtotal: itemSubtotal,
         color: item.color,
         size: item.size,
         image: product.images?.[0],
         customization: item.customization,
         customText: item.customText,
+        modifiers: orderModifiers,
       });
     }
 

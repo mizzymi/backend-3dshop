@@ -5,6 +5,17 @@ import { AuthRequest } from "../middleware/auth";
 import { uploadToCloudinary } from "../utils/uploadToCloudinary";
 import { deleteCloudinaryImages } from "../utils/cloudinaryHelpers";
 
+const parseArray = (value: any) => {
+  if (!value) return [];
+  if (Array.isArray(value)) return value;
+
+  try {
+    return JSON.parse(value);
+  } catch {
+    return [];
+  }
+};
+
 export const getProducts = async (_req: Request, res: Response) => {
   try {
     const products = await Product.find().sort({ createdAt: -1 });
@@ -30,7 +41,13 @@ export const getProductById = async (req: Request, res: Response) => {
 
 export const createProduct = async (req: Request, res: Response) => {
   try {
-    const product = await Product.create(req.body);
+    const product = await Product.create({
+      ...req.body,
+      category: parseArray(req.body.category),
+      colors: parseArray(req.body.colors),
+      sizes: parseArray(req.body.sizes),
+      modifiers: parseArray(req.body.modifiers),
+    });
 
     res.status(201).json({
       message: "Producto creado correctamente",
@@ -60,11 +77,12 @@ export const createProductWithImages = async (req: Request, res: Response) => {
       width: Number(req.body.width || 0),
       height: Number(req.body.height || 0),
       depth: Number(req.body.depth || 0),
-      category: JSON.parse(req.body.category || "[]"),
+      category: parseArray(req.body.category),
       customizable: req.body.customizable === "true",
       featured: req.body.featured === "true",
-      colors: JSON.parse(req.body.colors || "[]"),
-      sizes: JSON.parse(req.body.sizes || "[]"),
+      colors: parseArray(req.body.colors),
+      sizes: parseArray(req.body.sizes),
+      modifiers: parseArray(req.body.modifiers),
       images: imageUrls,
     });
 
@@ -83,17 +101,6 @@ export const createProductWithImages = async (req: Request, res: Response) => {
 export const updateProduct = async (req: Request, res: Response) => {
   try {
     const files = req.files as Express.Multer.File[] | undefined;
-
-    const parseArray = (value: any) => {
-      if (!value) return [];
-      if (Array.isArray(value)) return value;
-
-      try {
-        return JSON.parse(value);
-      } catch {
-        return [];
-      }
-    };
 
     const oldProduct = await Product.findById(req.params.id);
 
@@ -117,6 +124,7 @@ export const updateProduct = async (req: Request, res: Response) => {
 
     const updateData: any = {
       name: req.body.name,
+      slug: req.body.slug,
       description: req.body.description,
       category: parseArray(req.body.category),
       price: Number(req.body.price),
@@ -130,6 +138,7 @@ export const updateProduct = async (req: Request, res: Response) => {
       featured: req.body.featured === "true" || req.body.featured === true,
       colors: parseArray(req.body.colors),
       sizes: parseArray(req.body.sizes),
+      modifiers: parseArray(req.body.modifiers),
       images: [...existingImages, ...newImageUrls],
     };
 

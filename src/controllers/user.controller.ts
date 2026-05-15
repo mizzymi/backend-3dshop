@@ -194,6 +194,23 @@ export const editProfile = async (req: AuthRequest, res: Response) => {
 
     await user.save();
 
+    await Product.updateMany(
+      { "reviews.user": user._id },
+      {
+        $set: {
+          "reviews.$[review].username": user.username,
+          "reviews.$[review].profileImage": user.profileImage,
+        },
+      },
+      {
+        arrayFilters: [
+          {
+            "review.user": user._id,
+          },
+        ],
+      },
+    );
+
     res.json({
       message: "Perfil actualizado correctamente",
       user: {

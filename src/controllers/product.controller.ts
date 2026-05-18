@@ -2,8 +2,7 @@ import { Request, Response } from "express";
 import Product from "../models/Product";
 import User from "../models/User";
 import { AuthRequest } from "../middleware/auth";
-import { uploadToCloudinary } from "../utils/uploadToCloudinary";
-import { deleteCloudinaryImages } from "../utils/cloudinaryHelpers";
+import { deleteCloudinaryImages, uploadToProducts, uploadToReviews } from "../utils/cloudinaryHelpers";
 
 const parseArray = (value: any) => {
   if (!value) return [];
@@ -49,7 +48,7 @@ export const createProductWithImages = async (req: Request, res: Response) => {
 
     const imageUrls = productImageFiles.length
       ? await Promise.all(
-          productImageFiles.map((file) => uploadToCloudinary(file.buffer)),
+          productImageFiles.map((file) => uploadToProducts(file.buffer)),
         )
       : [];
 
@@ -64,7 +63,7 @@ export const createProductWithImages = async (req: Request, res: Response) => {
         );
 
         if (optionImageFile) {
-          option.image = await uploadToCloudinary(optionImageFile.buffer);
+          option.image = await uploadToProducts(optionImageFile.buffer);
         }
       }
     }
@@ -116,7 +115,7 @@ export const updateProduct = async (req: Request, res: Response) => {
 
     const newImageUrls = productImageFiles.length
       ? await Promise.all(
-          productImageFiles.map((file) => uploadToCloudinary(file.buffer)),
+          productImageFiles.map((file) => uploadToProducts(file.buffer)),
         )
       : [];
 
@@ -141,7 +140,7 @@ export const updateProduct = async (req: Request, res: Response) => {
         );
 
         if (optionImageFile) {
-          option.image = await uploadToCloudinary(optionImageFile.buffer);
+          option.image = await uploadToProducts(optionImageFile.buffer);
         }
       }
     }
@@ -271,12 +270,31 @@ export const addProductReview = async (req: AuthRequest, res: Response) => {
       });
     }
 
+    // =========================
+    // SUBIR IMÁGENES
+    // =========================
+
+    const uploadedImages: string[] = [];
+
+    if (req.files && Array.isArray(req.files)) {
+      for (const file of req.files) {
+        const imageUrl = await uploadToReviews(file.buffer);
+
+        uploadedImages.push(imageUrl);
+      }
+    }
+
+    // =========================
+    // CREAR REVIEW
+    // =========================
+
     product.reviews.push({
       user: user._id,
       username: user.username,
       profileImage: user.profileImage,
       rating: ratingNumber,
       comment,
+      images: uploadedImages,
     } as any);
 
     product.ratingCount = product.reviews.length;

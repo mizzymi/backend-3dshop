@@ -31,3 +31,49 @@ export const deleteCloudinaryImage = async (url: string) => {
 export const deleteCloudinaryImages = async (urls: string[]) => {
   await Promise.all(urls.map((url) => deleteCloudinaryImage(url)));
 };
+
+export const uploadToProducts = (
+  buffer: Buffer,
+  folder = "reimii-3d/products",
+): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      {
+        folder,
+        resource_type: "image",
+      },
+      (error, result) => {
+        if (error || !result) {
+          return reject(error);
+        }
+
+        resolve(result.secure_url);
+      },
+    );
+
+    stream.end(buffer);
+  });
+};
+
+export const uploadToReviews = (
+  buffer: Buffer,
+  folder = "reimii-3d/reviews",
+): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      {
+        folder,
+        resource_type: "image",
+      },
+      (error, result) => {
+        if (error || !result) {
+          return reject(error);
+        }
+
+        resolve(result.secure_url);
+      },
+    );
+
+    stream.end(buffer);
+  });
+};

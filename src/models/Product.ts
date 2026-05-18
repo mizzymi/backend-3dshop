@@ -6,6 +6,7 @@ export interface IReview {
   rating: number;
   comment: string;
   profileImage?: string;
+  images?: string[];
   createdAt?: Date;
 }
 
@@ -82,6 +83,11 @@ const ReviewSchema = new Schema<IReview>(
       trim: true,
       maxlength: 500,
     },
+
+    images: {
+      type: [String],
+      default: [],
+    },
   },
   { timestamps: true },
 );
@@ -112,7 +118,7 @@ const ModifierOptionSchema = new Schema<IModifierOption>(
     image: {
       type: String,
     },
-    
+
     requiresCustomerImage: {
       type: Boolean,
       default: false,

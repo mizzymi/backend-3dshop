@@ -3,7 +3,7 @@ import Order from "../models/Order";
 import Product from "../models/Product";
 import { AuthRequest } from "../middleware/auth";
 import { calculateShipping } from "../utils/calculateShipping";
-import { uploadToCloudinary } from "../utils/uploadToCloudinary";
+import { uploadToProducts } from "../utils/cloudinaryHelpers";
 
 const parseJSON = (value: any, fallback: any = []) => {
   if (!value) return fallback;
@@ -26,7 +26,7 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
     const files = (req.files as Express.Multer.File[]) || [];
 
     const uploadedImages = files.length
-      ? await Promise.all(files.map((file) => uploadToCloudinary(file.buffer)))
+      ? await Promise.all(files.map((file) => uploadToProducts(file.buffer)))
       : [];
 
     const customerName = req.body.customerName;

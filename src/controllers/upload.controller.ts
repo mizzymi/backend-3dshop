@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { uploadToCloudinary } from "../utils/uploadToCloudinary";
+import { uploadToProducts } from "../utils/cloudinaryHelpers";
 
 export const uploadProductImages = async (req: Request, res: Response) => {
     try {
@@ -12,7 +12,7 @@ export const uploadProductImages = async (req: Request, res: Response) => {
         }
 
         const imageUrls = await Promise.all(
-            files.map((file) => uploadToCloudinary(file.buffer))
+            files.map((file) => uploadToProducts(file.buffer))
         );
 
         res.status(201).json({

@@ -4,7 +4,7 @@ import {
     sendAdminCustomRequestNotification,
     sendCustomerCustomRequestConfirmation
 } from "../utils/customRequestEmails";
-import { uploadToCloudinary } from "../utils/uploadToCloudinary";
+import { uploadToProducts } from "../utils/cloudinaryHelpers";
 
 export const createCustomRequest = async (req: Request, res: Response) => {
     try {
@@ -13,7 +13,7 @@ export const createCustomRequest = async (req: Request, res: Response) => {
         const imageUrls = files?.length
             ? await Promise.all(
                 files.map(file =>
-                    uploadToCloudinary(
+                    uploadToProducts(
                         file.buffer,
                         "reimii-3d/custom-requests"
                     )

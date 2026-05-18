@@ -1,16 +1,9 @@
 import { Request, Response } from "express";
 import jwt from "jsonwebtoken";
-import { v2 as cloudinary } from "cloudinary";
 import User from "../models/User";
 import { AuthRequest } from "../middleware/auth";
 import Product from "../models/Product";
-import { deleteCloudinaryImage } from "../utils/cloudinaryHelpers";
-
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
+import { deleteCloudinaryImage, uploadProfileImage } from "../utils/cloudinaryHelpers";
 
 const generateToken = (user: any) => {
   return jwt.sign(
@@ -22,23 +15,6 @@ const generateToken = (user: any) => {
     process.env.JWT_SECRET as string,
     { expiresIn: "30d" },
   );
-};
-
-const uploadProfileImage = (fileBuffer: Buffer): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const stream = cloudinary.uploader.upload_stream(
-      {
-        folder: "reimii/profile-images",
-        resource_type: "image",
-      },
-      (error, result) => {
-        if (error || !result) return reject(error);
-        resolve(result.secure_url);
-      },
-    );
-
-    stream.end(fileBuffer);
-  });
 };
 
 export const registerUser = async (req: Request, res: Response) => {

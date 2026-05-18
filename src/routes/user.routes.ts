@@ -1,19 +1,20 @@
 import express from "express";
 
 import {
-    registerUser,
-    loginUser,
-    getProfile,
-    addShippingAddress,
-    editProfile,
-    toggleSavedProduct,
-    getSavedProducts,
-    addToCart,
-    getCart,
-    updateCartItem,
-    removeFromCart,
-    clearCart,
-    getMyReviews,
+  registerUser,
+  loginUser,
+  getProfile,
+  addShippingAddress,
+  editProfile,
+  toggleSavedProduct,
+  getSavedProducts,
+  addToCart,
+  getCart,
+  updateCartItem,
+  removeFromCart,
+  clearCart,
+  getMyReviews,
+  removeShippingAddress,
 } from "../controllers/user.controller";
 
 import { protect } from "../middleware/auth";
@@ -28,6 +29,7 @@ router.get("/profile", protect, getProfile);
 router.put("/profile", protect, upload.single("profileImage"), editProfile);
 
 router.post("/address", protect, addShippingAddress);
+router.delete("/address/:addressId", protect, removeShippingAddress);
 
 router.post("/saved/:productId", protect, toggleSavedProduct);
 router.get("/saved", protect, getSavedProducts);

@@ -3,7 +3,10 @@ import jwt from "jsonwebtoken";
 import User from "../models/User";
 import { AuthRequest } from "../middleware/auth";
 import Product from "../models/Product";
-import { deleteCloudinaryImage, uploadProfileImage } from "../utils/cloudinaryHelpers";
+import {
+  deleteCloudinaryImage,
+  uploadProfileImage,
+} from "../utils/cloudinaryHelpers";
 
 const generateToken = (user: any) => {
   return jwt.sign(
@@ -224,6 +227,35 @@ export const addShippingAddress = async (req: AuthRequest, res: Response) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Error al añadir dirección" });
+  }
+};
+
+export const removeShippingAddress = async (
+  req: AuthRequest,
+  res: Response,
+) => {
+  try {
+    const user = await User.findById(req.user?.id);
+
+    if (!user) {
+      return res.status(404).json({
+        message: "Usuario no encontrado",
+      });
+    }
+
+    user.shippingAddresses = user.shippingAddresses.filter(
+      (address: any) => address._id.toString() !== req.params.addressId,
+    );
+
+    await user.save();
+
+    res.json({
+      message: "Dirección eliminada",
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Error al eliminar dirección",
+    });
   }
 };
 

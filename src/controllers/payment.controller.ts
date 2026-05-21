@@ -7,6 +7,29 @@ import { processOrder } from "../utils/processOrder";
 import { AuthRequest } from "../middleware/auth";
 import PendingCheckout from "../models/PendingCheckout";
 
+const findSelectedVariant = (product: any, item: any) => {
+  if (!product.variants?.length) return null;
+
+  return product.variants.find((variant: any) => {
+    const hasColor = !!variant.color;
+    const hasSize = !!variant.size;
+
+    if (hasColor && !hasSize) {
+      return variant.color === item.color;
+    }
+
+    if (!hasColor && hasSize) {
+      return variant.size === item.size;
+    }
+
+    if (hasColor && hasSize) {
+      return variant.color === item.color && variant.size === item.size;
+    }
+
+    return false;
+  });
+};
+
 export const createCheckoutSession = async (
   req: AuthRequest,
   res: Response,
@@ -68,24 +91,38 @@ export const createCheckoutSession = async (
         throw new Error("Cantidad no válida");
       }
 
-      if (product.stock < quantity) {
+      const variant = findSelectedVariant(product, item);
+
+      if (product.variants?.length && !variant) {
+        throw new Error(`Variante no encontrada para ${product.name}`);
+      }
+
+      const availableStock = variant ? variant.stock : product.stock;
+
+      if (availableStock < quantity) {
         throw new Error(`Stock insuficiente para ${product.name}`);
       }
 
-      const itemSubtotal = product.price * quantity;
+      const unitPrice = Number(variant?.price ?? product.price);
+      const itemSubtotal = unitPrice * quantity;
+
       subtotal += itemSubtotal;
 
       return {
         productId: product._id.toString(),
         name: product.name,
         quantity,
-        unitPrice: product.price,
+        unitPrice,
+        basePrice: unitPrice,
         subtotal: itemSubtotal,
         color: item.color,
         size: item.size,
+        variantId: variant?.id,
+        variantSku: variant?.sku,
         image: product.images?.[0],
         customization: item.customization,
         customText: item.customText,
+        modifiers: item.modifiers || [],
       };
     });
 
@@ -94,16 +131,14 @@ export const createCheckoutSession = async (
         quantity: item.quantity,
         weight: products.find((p) => p._id.toString() === item.productId)
           ?.weight,
-
         width: products.find((p) => p._id.toString() === item.productId)?.width,
-
         height: products.find((p) => p._id.toString() === item.productId)
           ?.height,
-
         depth: products.find((p) => p._id.toString() === item.productId)?.depth,
       })),
       shippingAddress.country,
     );
+
     const total = subtotal + shippingCost;
 
     if (total <= 0) {

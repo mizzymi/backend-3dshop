@@ -99,8 +99,39 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
         throw new Error("Cantidad no válida");
       }
 
-      if (product.stock < quantity) {
-        throw new Error(`Stock insuficiente para ${product.name}`);
+      let variant = null;
+
+      if (product.variants?.length) {
+        variant = product.variants.find((v: any) => {
+          const hasColor = !!v.color;
+          const hasSize = !!v.size;
+
+          if (hasColor && !hasSize) {
+            return v.color === item.color;
+          }
+
+          if (!hasColor && hasSize) {
+            return v.size === item.size;
+          }
+
+          if (hasColor && hasSize) {
+            return v.color === item.color && v.size === item.size;
+          }
+
+          return false;
+        });
+
+        if (!variant) {
+          throw new Error(`Variante no encontrada para ${product.name}`);
+        }
+
+        if (variant.stock < quantity) {
+          throw new Error(`Stock insuficiente para ${product.name}`);
+        }
+      } else {
+        if (product.stock < quantity) {
+          throw new Error(`Stock insuficiente para ${product.name}`);
+        }
       }
 
       const selectedModifiers = item.modifiers || [];
@@ -160,10 +191,16 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
         };
       });
 
-      product.stock -= quantity;
+      if (variant) {
+        variant.stock -= quantity;
+      } else {
+        product.stock -= quantity;
+      }
       await product.save({ session });
 
-      const unitPrice = product.price + modifiersTotal;
+      const basePrice = variant?.price ?? product.price;
+
+      const unitPrice = basePrice + modifiersTotal;
       const itemSubtotal = unitPrice * quantity;
 
       orderItems.push({
@@ -171,7 +208,7 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
         name: product.name,
         quantity,
         unitPrice,
-        basePrice: product.price,
+        basePrice,
         modifiersTotal,
         subtotal: itemSubtotal,
         color: item.color,

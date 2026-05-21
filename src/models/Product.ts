@@ -10,6 +10,14 @@ export interface IReview {
   createdAt?: Date;
 }
 
+export interface IProductVariant {
+  id: string;
+  color: string;
+  size: string;
+  price: number;
+  stock: number;
+  sku?: string;
+}
 export interface IModifierOption {
   id: string;
   label: string;
@@ -36,6 +44,8 @@ export interface IProduct extends Document {
   category: string[];
   colors: string[];
   sizes: string[];
+
+  variants: IProductVariant[];
 
   modifiers: IModifier[];
 
@@ -158,6 +168,43 @@ const ModifierSchema = new Schema<IModifier>(
   { _id: false },
 );
 
+const ProductVariantSchema = new Schema<IProductVariant>(
+  {
+    id: {
+      type: String,
+      required: true,
+    },
+
+    color: {
+      type: String,
+      required: true,
+    },
+
+    size: {
+      type: String,
+      required: true,
+    },
+
+    price: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
+
+    stock: {
+      type: Number,
+      required: true,
+      default: 0,
+      min: 0,
+    },
+
+    sku: {
+      type: String,
+    },
+  },
+  { _id: false },
+);
+
 const ProductSchema = new Schema<IProduct>(
   {
     name: { type: String, required: true },
@@ -188,6 +235,11 @@ const ProductSchema = new Schema<IProduct>(
     colors: [{ type: String }],
 
     sizes: [{ type: String }],
+
+    variants: {
+      type: [ProductVariantSchema],
+      default: [],
+    },
 
     modifiers: {
       type: [ModifierSchema],

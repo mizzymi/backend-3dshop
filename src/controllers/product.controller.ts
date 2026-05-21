@@ -2,7 +2,11 @@ import { Request, Response } from "express";
 import Product from "../models/Product";
 import User from "../models/User";
 import { AuthRequest } from "../middleware/auth";
-import { deleteCloudinaryImages, uploadToProducts, uploadToReviews } from "../utils/cloudinaryHelpers";
+import {
+  deleteCloudinaryImages,
+  uploadToProducts,
+  uploadToReviews,
+} from "../utils/cloudinaryHelpers";
 
 const parseArray = (value: any) => {
   if (!value) return [];
@@ -53,6 +57,7 @@ export const createProductWithImages = async (req: Request, res: Response) => {
       : [];
 
     const modifiers = parseArray(req.body.modifiers);
+    const variants = parseArray(req.body.variants);
 
     for (const modifier of modifiers) {
       for (const option of modifier.options || []) {
@@ -70,18 +75,27 @@ export const createProductWithImages = async (req: Request, res: Response) => {
 
     const product = await Product.create({
       ...req.body,
+
       price: Number(req.body.price),
       stock: Number(req.body.stock),
+
       weight: Number(req.body.weight || 0),
       width: Number(req.body.width || 0),
       height: Number(req.body.height || 0),
       depth: Number(req.body.depth || 0),
+
       category: parseArray(req.body.category),
-      customizable: req.body.customizable === "true",
-      featured: req.body.featured === "true",
       colors: parseArray(req.body.colors),
       sizes: parseArray(req.body.sizes),
+
+      variants,
       modifiers,
+
+      customizable:
+        req.body.customizable === "true" || req.body.customizable === true,
+
+      featured: req.body.featured === "true" || req.body.featured === true,
+
       images: imageUrls,
     });
 
@@ -130,6 +144,7 @@ export const updateProduct = async (req: Request, res: Response) => {
     }
 
     const modifiers = parseArray(req.body.modifiers);
+    const variants = parseArray(req.body.variants);
 
     for (const modifier of modifiers) {
       for (const option of modifier.options || []) {
@@ -150,8 +165,6 @@ export const updateProduct = async (req: Request, res: Response) => {
       slug: req.body.slug,
       description: req.body.description,
 
-      category: parseArray(req.body.category),
-
       price: Number(req.body.price),
       stock: Number(req.body.stock),
 
@@ -160,15 +173,17 @@ export const updateProduct = async (req: Request, res: Response) => {
       height: Number(req.body.height || 0),
       depth: Number(req.body.depth || 0),
 
+      category: parseArray(req.body.category),
+      colors: parseArray(req.body.colors),
+      sizes: parseArray(req.body.sizes),
+
+      variants,
+      modifiers,
+
       customizable:
         req.body.customizable === "true" || req.body.customizable === true,
 
       featured: req.body.featured === "true" || req.body.featured === true,
-
-      colors: parseArray(req.body.colors),
-      sizes: parseArray(req.body.sizes),
-
-      modifiers,
 
       images: [...existingImages, ...newImageUrls],
     };
@@ -270,23 +285,14 @@ export const addProductReview = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // =========================
-    // SUBIR IMÁGENES
-    // =========================
-
     const uploadedImages: string[] = [];
 
     if (req.files && Array.isArray(req.files)) {
       for (const file of req.files) {
         const imageUrl = await uploadToReviews(file.buffer);
-
         uploadedImages.push(imageUrl);
       }
     }
-
-    // =========================
-    // CREAR REVIEW
-    // =========================
 
     product.reviews.push({
       user: user._id,

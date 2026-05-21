@@ -12,8 +12,8 @@ export interface IReview {
 
 export interface IProductVariant {
   id: string;
-  color: string;
-  size: string;
+  color?: string;
+  size?: string;
   price: number;
   stock: number;
   sku?: string;
@@ -177,12 +177,12 @@ const ProductVariantSchema = new Schema<IProductVariant>(
 
     color: {
       type: String,
-      required: true,
+      default: "",
     },
 
     size: {
       type: String,
-      required: true,
+      default: "",
     },
 
     price: {
